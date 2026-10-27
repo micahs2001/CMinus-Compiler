@@ -1,0 +1,13 @@
+int x;
+int double(int y)
+{
+int temp;
+temp = 2;
+return temp * y;
+}
+
+int main(void) 
+{
+double ();
+return 1;
+}

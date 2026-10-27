@@ -1,0 +1,5 @@
+CompileFlags:
+  Add:
+    - -I/home/students/mcschafe/435/labs/lab05_rd_parsing_cminus/src
+    - -std=c++26
+    - -Wall

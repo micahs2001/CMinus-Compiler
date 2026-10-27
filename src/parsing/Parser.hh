@@ -1,0 +1,231 @@
+/******************************************************************************
+ File Name:    Parser.hh
+ Description:  Parser class definition for CMinus language
+ Author:       Micah Schafer
+ Date:         October 16, 2026
+
+ *****************************************************************************/
+
+/*****************************************************************************/
+// Includes
+#pragma once
+
+#include "lexing/Scanner.hh"
+
+/*****************************************************************************/
+// Parser Class Definition
+
+class Parser
+{
+public:
+  explicit Parser (Scanner scanner);
+
+  void
+  parse ();
+
+private:
+  // Save the current token, and replace it with the next one.
+  // If there's an error, throw a ScanError.
+  // Return the saved token.
+  Token
+  advance ();
+
+  // Check if current token matches `expected`, and advance if so.
+  // Otherwise, throw a ParseError.
+  Token
+  match (TokenType expected);
+
+  // Check if the current token matches `type`.
+  bool
+  check (TokenType type) const;
+
+  // Check if current token is in 'types'
+  bool
+  findToken (std::initializer_list<TokenType> types) const;
+
+  // Repeat function 'rule()' until the current token is found in 'terminators'
+  template<std::invocable Fun>
+  void
+  repeatUntil (Fun rule, std::initializer_list<TokenType> terminators);
+
+  // Repeat function 'rule()' while the current token is found in 'first'
+  template<std::invocable Fun>
+  void
+  repeatWhile (Fun rule, std::initializer_list<TokenType> first);
+
+  /****************************************************************************
+   * Parse program of form:
+   * <program> ::= { <declaration> } <EOF>
+   ***************************************************************************/
+  void
+  parseProgram ();
+
+  /****************************************************************************
+   * Parse declaration of form:
+   * <declaration> ::= <type-spec> <id> ( ";"
+   *                                    | "[" <num> "]" ";"
+   *                                    | "(" <full-params> ")" <compound-stmt>
+   *                                    )
+   ***************************************************************************/
+  void
+  parseDecl ();
+
+  /****************************************************************************
+   * Parse variable declaration of form:
+   * <var-declaration> ::= <type-spec> <id> [ "[" NUM "]" ] ";"
+   ***************************************************************************/
+  void
+  parseVarDeclaration ();
+
+  /****************************************************************************
+   * Parse type specifier of form:
+   * <type-spec> ::= "int" | "void"
+   ***************************************************************************/
+  void
+  parseTypeSpec ();
+
+  /****************************************************************************
+   * Parse parameters of form:
+   * <full-params> ::= "void"
+                     | <type-spec> <param-post-type-spec>
+                     | <param>
+                     | <full-params> { "," <param> }
+   ***************************************************************************/
+  void
+  parseFullParams ();
+
+  /****************************************************************************
+   * Parse parameter of form:
+   * <param> ::= <type-spec> <param-post-type-spec>
+   ***************************************************************************/
+  void
+  parseParam ();
+
+  /****************************************************************************
+   * Parse parameter post type specififer of form:
+   * <param-post-type-spec> ::= <id> [ "[" "]" ]
+   ***************************************************************************/
+  void
+  ParseParamPostTypeSpec ();
+
+  /****************************************************************************
+   * Parse compound statement of form:
+   * <compound-stmt> ::= "{" { <var-declaration> } { <statement> } "}"
+   ***************************************************************************/
+  void
+  parseCompoundStmt ();
+
+  /****************************************************************************
+   * Parse statement of form:
+   * <statement> ::= <expression-stmt>
+   *               | <compound-stmt>
+   *               | <selection-stmt>
+   *               | <iteration-stmt>
+   *               | <return-stmt>
+   ***************************************************************************/
+  void
+  parseStatement ();
+
+  /****************************************************************************
+   * Parse expression statement of form:
+   * <expression-stmt> ::= [ <expression> ] ";"
+   ***************************************************************************/
+  void
+  parseExpressionStmt ();
+
+  /****************************************************************************
+   * Parse selection statement of form:
+   * <selection-stmt> ::= "if" "(" <expression> ")" <statement>
+   *                      [ "else" <statement> ]
+   ***************************************************************************/
+  void
+  parseSelectionStmt ();
+
+  /****************************************************************************
+   * Parse iteration statement of form:
+   * <iteration-stmt> ::= "while" "(" <expression> ")" <statement>
+   ***************************************************************************/
+  void
+  parseIterationStmt ();
+
+  /****************************************************************************
+   * Parse return statement of form:
+   * <return-stmt> ::= "return" [ <expression> ] ";"
+   ***************************************************************************/
+  void
+  parseReturnStmt ();
+
+  /****************************************************************************
+   * Parse expression of form:
+   * <expression> ::= <var> "=" <expression>
+   *                | <simple-expression>
+   *                | <additive-expression> <simple-expr-post-add-expr>
+   ***************************************************************************/
+  void
+  parseExpression ();
+
+  /****************************************************************************
+   * Graduates a factor that was just parsed to an additive expression
+   ***************************************************************************/
+  void
+  graduateFactor ();
+
+  /****************************************************************************
+   * Parse a variable of form:
+   * <var> ::= ID | ID "[" <expression> "]"
+   ***************************************************************************/
+  void
+  parseVar ();
+
+  /****************************************************************************
+   * Parse simple expression of form:
+   * <simple-expression> ::= <additive-expression> <simple-expr-post-add-expr>
+   ***************************************************************************/
+  void
+  parseSimpleExpr ();
+
+  /****************************************************************************
+   * Parse a simple expression after an additive expression of form:
+   * <simple-expr-post-add-expr> ::= [ <relop> <additive-exprression> ]
+   * Where <relop> ::= "<=" | "<" | ">" | ">=" | "==" | "!="
+   ***************************************************************************/
+  void
+  parseSimpleExprPostAddExpr ();
+
+  /****************************************************************************
+   * Parse additive expression of form:
+   * <additive-expression> ::= <term> { <addop> <term> }
+   * Where <addop> ::= "+" | "-"
+   ***************************************************************************/
+  void
+  parseAdditiveExpr ();
+
+  /****************************************************************************
+   * Parse term of form:
+   * <term> ::= <factor> { <mulop> <factor> }
+   * Where <mulop> ::= "*" | "/"
+   ***************************************************************************/
+  void
+  parseTerm ();
+
+  /****************************************************************************
+   * Parse factor of form:
+   * <factor> ::= "(" <expression> ")" | <var> | <call> | NUM
+   ***************************************************************************/
+  void
+  parseFactor ();
+
+  /****************************************************************************
+   * Parse args of form:
+   * <expression> { "," <expression> }
+   ***************************************************************************/
+  void
+  parseArgs ();
+
+  /*****************************************************************************/
+  // Class Fields
+
+private:
+  Scanner scanner_;
+  Token current_;
+};
