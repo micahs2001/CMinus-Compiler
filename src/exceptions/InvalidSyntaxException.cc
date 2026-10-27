@@ -14,6 +14,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 class InvalidSyntaxException : public std::runtime_error
@@ -60,9 +61,10 @@ private:
                   const std::string& got)
   {
     std::string expStr =
-      std::format ("{{ \'{:s}\' }}",
+      std::format ("{{ '{:s}' }}",
                    expected | std::views::transform (tokenToString) |
-                     std::views::join_with (std::string_view ("\', \'")));
+                     std::views::join_with (std::string_view ("', '")) |
+                     std::ranges::to<std::string> ());
 
     return std::format ("Compilation Error\n  Parse Error [Line {}, Col {}]\n  "
                         "  Expected {} but got \'{}\'",

@@ -1,0 +1,15 @@
+# GMZ: My Formatting Style
+
+BasedOnStyle: Mozilla
+BreakBeforeBraces: Allman
+AlwaysBreakAfterReturnType: All
+BreakAfterAttributes: Always
+PointerAlignment: Left
+SpaceAfterCStyleCast: true
+SpaceBeforeParens: Always
+SpaceBeforeCpp11BracedList: true
+
+# Constructor Formatting
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerIndentWidth: 4
+PackConstructorInitializers: Never

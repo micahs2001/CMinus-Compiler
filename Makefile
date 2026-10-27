@@ -1,12 +1,12 @@
 ########################################################
 # Makefile for CSCI 435 
-# Author: Dr. Zoppetti
+# Author: Micah Schafer, Dr. Gary M. Zoppetti
 ########################################################
 
 ########################################################
 # Variable definitions
 ########################################################
-CXX := g++
+CXX := g++-16
 
 # C++ compiler flags
 CXXFLAGS := -Werror -Wall -std=c++26 -Isrc
@@ -22,7 +22,9 @@ SRC_DIR := src
 
 SRCS := $(shell find $(SRC_DIR) -name '*.cc')
 
-OBJS := $(SRCS:.cc=.o)
+BUILD_DIR := build
+
+OBJS := $(patsubst $(SRC_DIR)/%.cc,$(BUILD_DIR)/%.o,$(SRCS))
 
 
 #############################################################
@@ -36,6 +38,10 @@ OBJS := $(SRCS:.cc=.o)
 $(EXEC) : $(OBJS)
 	$(LINK) $^ -o $@
 
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 %.o : %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
@@ -47,6 +53,6 @@ $(EXEC) : $(OBJS)
 .PHONY : clean
 clean :
 	$(RM) $(EXEC) a.out core
-	$(RM) *.o *.d *~
+	$(RM) -r $(BUILD_DIR)
 
 #############################################################
