@@ -7,7 +7,11 @@
 #include <vector>
 
 #include "tokenizing/Token.hh"
-#include <llvm/IR/Value.h>
+// #include <llvm/IR/Value.h>
+namespace llvm
+{
+class Value;
+}
 
 struct ProgramNode;
 struct VarDeclNode;

@@ -11,6 +11,8 @@
 #include "exceptions/Exceptions.hh"
 #include "lexing/Scanner.hh"
 #include "parsing/Parser.hh"
+#include "semantic_analysis/Ast.hh"
+#include "semantic_analysis/PrintVisitor.hh"
 
 #include <fstream>
 #include <iostream>
@@ -29,6 +31,9 @@ readFromIn ();
 std::string
 tokToStr (TokenType type);
 
+void
+replaceExt (std::string& filename);
+
 /*****************************************************************************/
 // Main
 
@@ -36,14 +41,17 @@ int
 main (int argc, char* argv[])
 {
   // Select input method based on if there was a file inputted
+  std::string filename;
   std::string input;
   if (argc > 1)
   {
-    input = fileToStr (argv[1]);
+    filename = argv[1];
+    input = fileToStr (filename);
     std::println ("File inputted");
   }
   else
   {
+    filename = "input.cm";
     input = readFromIn ();
   }
 
@@ -53,7 +61,11 @@ main (int argc, char* argv[])
 
   try
   {
-    parser.parse ();
+    AstNodePtr root = parser.parse ();
+    replaceExt (filename);
+    std::ofstream outFile (filename);
+    PrintVisitor prtvisit (outFile);
+    prtvisit.visit (root);
   }
   catch (InvalidSyntaxException& e)
   {
@@ -130,4 +142,15 @@ tokToStr (TokenType type)
                            "Error"
   };
   return toks[static_cast<int> (type)];
+}
+
+void
+replaceExt (std::string& filename)
+{
+  size_t pos = filename.rfind (".cm");
+
+  if (pos != std::string::npos)
+  {
+    filename.replace (pos, 3, ".ast");
+  }
 }

@@ -1,0 +1,254 @@
+ProgramNode:
+  VarDeclNode: int x[20]
+  FunDeclNode: int continueSorting
+    Params:
+      ParamDeclNode: int a[]
+      ParamDeclNode: int index
+      ParamDeclNode: int temp
+    Body:
+      CompoundStmtNode:
+        Local Decls:
+          VarDeclNode: int keepGoing
+        Statements:
+          IfStmtNode:
+            Condition:
+              BinaryExprNode (>=):
+                VarExprNode: index
+                NumExprNode: 1
+            Then:
+              CompoundStmtNode:
+                Statements:
+                  ExprStmtNode:
+                    AssignExprNode:
+                      LHS:
+                        VarExprNode: keepGoing
+                      RHS:
+                        NumExprNode: 1
+            Else:
+              IfStmtNode:
+                Condition:
+                  BinaryExprNode (<):
+                    VarExprNode: temp
+                    VarExprNode: x
+                      Index:
+                        BinaryExprNode (-):
+                          VarExprNode: index
+                          NumExprNode: 1
+                Then:
+                  CompoundStmtNode:
+                    Statements:
+                      ExprStmtNode:
+                        AssignExprNode:
+                          LHS:
+                            VarExprNode: keepGoing
+                          RHS:
+                            NumExprNode: 1
+                Else:
+                  CompoundStmtNode:
+                    Statements:
+                      ExprStmtNode:
+                        AssignExprNode:
+                          LHS:
+                            VarExprNode: keepGoing
+                          RHS:
+                            NumExprNode: 0
+          ReturnStmtNode:
+            VarExprNode: keepGoing
+  FunDeclNode: void sort
+    Params:
+      ParamDeclNode: int a[]
+      ParamDeclNode: int size
+    Body:
+      CompoundStmtNode:
+        Local Decls:
+          VarDeclNode: int temp
+          VarDeclNode: int currentIndex
+          VarDeclNode: int index
+          VarDeclNode: int keepGoing
+        Statements:
+          ExprStmtNode:
+            AssignExprNode:
+              LHS:
+                VarExprNode: keepGoing
+              RHS:
+                NumExprNode: 1
+          ExprStmtNode:
+            AssignExprNode:
+              LHS:
+                VarExprNode: currentIndex
+              RHS:
+                NumExprNode: 1
+          WhileStmtNode:
+            Condition:
+              BinaryExprNode (<):
+                VarExprNode: currentIndex
+                VarExprNode: size
+            Body:
+              CompoundStmtNode:
+                Statements:
+                  ExprStmtNode:
+                    AssignExprNode:
+                      LHS:
+                        VarExprNode: temp
+                      RHS:
+                        VarExprNode: x
+                          Index:
+                            VarExprNode: currentIndex
+                  ExprStmtNode:
+                    AssignExprNode:
+                      LHS:
+                        VarExprNode: index
+                      RHS:
+                        VarExprNode: currentIndex
+                  WhileStmtNode:
+                    Condition:
+                      AssignExprNode:
+                        LHS:
+                          VarExprNode: keepGoing
+                        RHS:
+                          BinaryExprNode (==):
+                            CallExprNode: continueSorting
+                              Args:
+                                VarExprNode: x
+                                VarExprNode: index
+                                VarExprNode: temp
+                            NumExprNode: 1
+                    Body:
+                      CompoundStmtNode:
+                        Statements:
+                          ExprStmtNode:
+                            AssignExprNode:
+                              LHS:
+                                VarExprNode: x
+                                  Index:
+                                    VarExprNode: index
+                              RHS:
+                                VarExprNode: x
+                                  Index:
+                                    BinaryExprNode (-):
+                                      VarExprNode: index
+                                      NumExprNode: 1
+                          ExprStmtNode:
+                            AssignExprNode:
+                              LHS:
+                                VarExprNode: index
+                              RHS:
+                                BinaryExprNode (-):
+                                  VarExprNode: index
+                                  NumExprNode: 1
+                  ExprStmtNode:
+                    AssignExprNode:
+                      LHS:
+                        VarExprNode: keepGoing
+                      RHS:
+                        NumExprNode: 1
+                  ExprStmtNode:
+                    AssignExprNode:
+                      LHS:
+                        VarExprNode: x
+                          Index:
+                            VarExprNode: index
+                      RHS:
+                        VarExprNode: temp
+                  ExprStmtNode:
+                    AssignExprNode:
+                      LHS:
+                        VarExprNode: currentIndex
+                      RHS:
+                        BinaryExprNode (+):
+                          VarExprNode: currentIndex
+                          NumExprNode: 1
+  FunDeclNode: void main
+    Params:
+    Body:
+      CompoundStmtNode:
+        Local Decls:
+          VarDeclNode: int size
+          VarDeclNode: int i
+          VarDeclNode: int num
+        Statements:
+          ExprStmtNode:
+            AssignExprNode:
+              LHS:
+                VarExprNode: size
+              RHS:
+                NumExprNode: 20
+          ExprStmtNode:
+            AssignExprNode:
+              LHS:
+                VarExprNode: i
+              RHS:
+                VarExprNode: size
+          ExprStmtNode:
+            AssignExprNode:
+              LHS:
+                VarExprNode: num
+              RHS:
+                NumExprNode: 0
+          WhileStmtNode:
+            Condition:
+              BinaryExprNode (>):
+                VarExprNode: i
+                NumExprNode: 0
+            Body:
+              CompoundStmtNode:
+                Statements:
+                  ExprStmtNode:
+                    AssignExprNode:
+                      LHS:
+                        VarExprNode: x
+                          Index:
+                            BinaryExprNode (-):
+                              VarExprNode: i
+                              NumExprNode: 1
+                      RHS:
+                        VarExprNode: num
+                  ExprStmtNode:
+                    AssignExprNode:
+                      LHS:
+                        VarExprNode: i
+                      RHS:
+                        BinaryExprNode (-):
+                          VarExprNode: i
+                          NumExprNode: 1
+                  ExprStmtNode:
+                    AssignExprNode:
+                      LHS:
+                        VarExprNode: num
+                      RHS:
+                        BinaryExprNode (+):
+                          VarExprNode: num
+                          NumExprNode: 1
+          ExprStmtNode:
+            CallExprNode: sort
+              Args:
+                VarExprNode: x
+                VarExprNode: size
+          ExprStmtNode:
+            AssignExprNode:
+              LHS:
+                VarExprNode: i
+              RHS:
+                NumExprNode: 0
+          WhileStmtNode:
+            Condition:
+              BinaryExprNode (<):
+                VarExprNode: i
+                VarExprNode: size
+            Body:
+              CompoundStmtNode:
+                Statements:
+                  ExprStmtNode:
+                    CallExprNode: output
+                      Args:
+                        VarExprNode: x
+                          Index:
+                            VarExprNode: i
+                  ExprStmtNode:
+                    AssignExprNode:
+                      LHS:
+                        VarExprNode: i
+                      RHS:
+                        BinaryExprNode (+):
+                          VarExprNode: i
+                          NumExprNode: 1
