@@ -6,9 +6,8 @@
 #include <variant>
 #include <vector>
 
-#include <llvm/IR/Value.h>
-
 #include "tokenizing/Token.hh"
+#include <llvm/IR/Value.h>
 
 struct ProgramNode;
 struct VarDeclNode;

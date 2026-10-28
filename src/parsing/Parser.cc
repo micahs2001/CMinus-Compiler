@@ -11,9 +11,11 @@
 // Includes
 #include <algorithm>
 #include <print>
+#include <vector>
 
 #include "exceptions/Exceptions.hh"
 #include "parsing/Parser.hh"
+#include "semantic_analysis/Ast.hh"
 #include "tokenizing/Token.hh"
 
 /*****************************************************************************/
@@ -24,14 +26,14 @@ Parser::Parser (Scanner scanner)
 {
 }
 
-void
+AstNodePtr
 Parser::parse ()
 {
   advance ();
-  parseProgram ();
+  AstNodePtr prog = parseProgram ();
 
   std::println ("\n\nValid!");
-  return;
+  return prog;
 }
 
 Token
@@ -84,80 +86,99 @@ Parser::repeatWhile (Fun rule, std::initializer_list<TokenType> first)
     rule ();
 }
 
-void
+AstNodePtr
 Parser::parseProgram ()
 {
-  repeatUntil ([this] { return parseDecl (); }, { TokenType::EndOfFile });
+  std::vector<AstNodePtr> decls;
+  decls.push_back (parseDecl ());
+  repeatUntil ([this, &decls] { decls.push_back (parseDecl ()); },
+               { TokenType::EndOfFile });
+  return makeAstNode<ProgramNode> (std::move (decls));
 }
 
-void
+AstNodePtr
 Parser::parseDecl ()
 {
-  parseTypeSpec ();
-  match (TokenType::Id);
+  TypeSpecifier ty = parseTypeSpec ();
+  std::string idName = match (TokenType::Id).lexeme;
 
   switch (current_.type)
   {
     case TokenType::Semi:
+    {
       match (TokenType::Semi);
-      break;
+      return makeAstNode<VarDeclNode> (ty, std::move (idName));
+    }
     case TokenType::LBrack:
+    {
       match (TokenType::LBrack);
-      match (TokenType::Num);
+      int arraySize = std::stoi (match (TokenType::Num).lexeme);
       match (TokenType::RBrack);
       match (TokenType::Semi);
-      break;
+      return makeAstNode<VarDeclNode> (ty, std::move (idName), arraySize);
+    }
     case TokenType::LParen:
+    {
       match (TokenType::LParen);
-      parseFullParams ();
+      std::vector<AstNodePtr> params = parseFullParams ();
       match (TokenType::RParen);
-      parseCompoundStmt ();
-      break;
+      AstNodePtr cmpstmt = parseCompoundStmt ();
+      return makeAstNode<FunDeclNode> (
+        ty, std::move (idName), std::move (params), std::move (cmpstmt));
+    }
     default:
+    {
       throw InvalidSyntaxException (
         current_.line,
         current_.column,
         { TokenType::Semi, TokenType::LBrack, TokenType::LParen },
         current_.lexeme);
+    }
   }
 }
 
-void
+AstNodePtr
 Parser::parseVarDeclaration ()
 {
-  parseTypeSpec ();
-  match (TokenType::Id);
+  TypeSpecifier ty = parseTypeSpec ();
+  std::string idName = match (TokenType::Id).lexeme;
 
   switch (current_.type)
   {
     case TokenType::Semi:
+    {
       match (TokenType::Semi);
-      break;
+      return makeAstNode<VarDeclNode> (ty, std::move (idName));
+    }
     case TokenType::LBrack:
+    {
       match (TokenType::LBrack);
-      match (TokenType::Num);
+      int arraySize = std::stoi (match (TokenType::Num).lexeme);
       match (TokenType::RBrack);
       match (TokenType::Semi);
-      break;
+      return makeAstNode<VarDeclNode> (ty, std::move (idName), arraySize);
+    }
     default:
+    {
       throw InvalidSyntaxException (current_.line,
                                     current_.column,
                                     { TokenType::Semi, TokenType::LBrack },
                                     current_.lexeme);
+    }
   }
 }
 
-void
+TypeSpecifier
 Parser::parseTypeSpec ()
 {
   switch (current_.type)
   {
     case TokenType::Int:
       match (TokenType::Int);
-      break;
+      return TypeSpecifier::Int;
     case TokenType::Void:
       match (TokenType::Void);
-      break;
+      return TypeSpecifier::Void;
     default:
       throw InvalidSyntaxException (current_.line,
                                     current_.column,
@@ -166,58 +187,72 @@ Parser::parseTypeSpec ()
   }
 }
 
-void
+std::vector<AstNodePtr>
 Parser::parseFullParams ()
 {
+  std::vector<AstNodePtr> params;
+  bool isArray { false };
   if (check (TokenType::Void))
   {
     match (TokenType::Void);
     // If "void" is at the end of params
     if (check (TokenType::RParen))
-      return;
-    ParseParamPostTypeSpec ();
+      return params;
+    std::string idName = match (TokenType::Id).lexeme;
+    if (check (TokenType::LBrack))
+    {
+      match (TokenType::LBrack);
+      match (TokenType::RBrack);
+      isArray = true;
+    }
+    params.push_back (makeAstNode<ParamDeclNode> (
+      TypeSpecifier::Void, std::move (idName), isArray));
   }
   else
-    parseParam ();
+    params.push_back (parseParam ());
 
   repeatWhile (
-    [this]
+    [this, &params]
     {
       match (TokenType::Comma);
-      parseParam ();
+      params.push_back (parseParam ());
     },
     { TokenType::Comma });
+  return params;
 }
 
-void
+AstNodePtr
 Parser::parseParam ()
 {
-  parseTypeSpec ();
-  ParseParamPostTypeSpec ();
-}
-
-void
-Parser::ParseParamPostTypeSpec ()
-{
-  match (TokenType::Id);
+  bool isArray { false };
+  TypeSpecifier ty = parseTypeSpec ();
+  std::string idName = match (TokenType::Id).lexeme;
   if (check (TokenType::LBrack))
   {
     match (TokenType::LBrack);
     match (TokenType::RBrack);
+    isArray = true;
   }
+  return makeAstNode<ParamDeclNode> (ty, std::move (idName), isArray);
 }
 
-void
+AstNodePtr
 Parser::parseCompoundStmt ()
 {
   match (TokenType::LBrace);
-  repeatWhile ([this] { parseVarDeclaration (); },
+  std::vector<AstNodePtr> localDecls;
+  repeatWhile ([this, &localDecls]
+               { localDecls.push_back (parseVarDeclaration ()); },
                { TokenType::Int, TokenType::Void });
-  repeatUntil ([this] { parseStatement (); }, { TokenType::RBrace });
+  std::vector<AstNodePtr> stmtList;
+  repeatUntil ([this, &stmtList] { stmtList.push_back (parseStatement ()); },
+               { TokenType::RBrace });
   match (TokenType::RBrace);
+  return makeAstNode<CompoundStmtNode> (std::move (localDecls),
+                                        std::move (stmtList));
 }
 
-void
+AstNodePtr
 Parser::parseStatement ()
 {
   switch (current_.type)
@@ -226,20 +261,15 @@ Parser::parseStatement ()
     case TokenType::LParen:
     case TokenType::Id:
     case TokenType::Num:
-      parseExpressionStmt ();
-      break;
+      return parseExpressionStmt ();
     case TokenType::LBrace:
-      parseCompoundStmt ();
-      break;
+      return parseCompoundStmt ();
     case TokenType::If:
-      parseSelectionStmt ();
-      break;
+      return parseSelectionStmt ();
     case TokenType::While:
-      parseIterationStmt ();
-      break;
+      return parseIterationStmt ();
     case TokenType::Return:
-      parseReturnStmt ();
-      break;
+      return parseReturnStmt ();
     default:
       throw InvalidSyntaxException (current_.line,
                                     current_.column,
@@ -255,15 +285,16 @@ Parser::parseStatement ()
   }
 }
 
-void
+AstNodePtr
 Parser::parseExpressionStmt ()
 {
+  AstNodePtr exp;
   switch (current_.type)
   {
     case TokenType::LParen:
     case TokenType::Id:
     case TokenType::Num:
-      parseExpression ();
+      exp = parseExpression ();
       break;
     case TokenType::Semi:
       break;
@@ -275,209 +306,214 @@ Parser::parseExpressionStmt ()
         current_.lexeme);
   }
   match (TokenType::Semi);
+  return makeAstNode<ExprStmtNode> (std::move (exp));
 }
 
-void
+AstNodePtr
 Parser::parseSelectionStmt ()
 {
   match (TokenType::If);
   match (TokenType::LParen);
-  parseExpression ();
+  AstNodePtr condition = parseExpression ();
   match (TokenType::RParen);
-  parseStatement ();
+  AstNodePtr thenStmt = parseStatement ();
+  AstNodePtr elseStmt;
   if (check (TokenType::Else))
   {
     match (TokenType::Else);
-    parseStatement ();
+    elseStmt = parseStatement ();
   }
+  return makeAstNode<IfStmtNode> (
+    std::move (condition), std::move (thenStmt), std::move (elseStmt));
 }
 
-void
+AstNodePtr
 Parser::parseIterationStmt ()
 {
   match (TokenType::While);
   match (TokenType::LParen);
-  parseExpression ();
+  AstNodePtr condition = parseExpression ();
   match (TokenType::RParen);
-  parseStatement ();
+  AstNodePtr body = parseStatement ();
+  return makeAstNode<WhileStmtNode> (std::move (condition), std::move (body));
 }
 
-void
+AstNodePtr
 Parser::parseReturnStmt ()
 {
+  AstNodePtr expr;
   match (TokenType::Return);
   if (!check (TokenType::Semi))
-    parseExpression ();
+    expr = parseExpression ();
   match (TokenType::Semi);
+  return makeAstNode<ReturnStmtNode> (std::move (expr));
 }
 
-void
+AstNodePtr
 Parser::parseExpression ()
 {
-  if (!check (TokenType::Id))
+  AstNodePtr leftTree;
+  // If assignExpr or first factor is callExpr or varExpr
+  if (check (TokenType::Id))
   {
-    parseSimpleExpr ();
-    return;
+    std::string idName = match (TokenType::Id).lexeme;
+
+    // If <var>
+    // Parse and return Assignment exp or set factor = <var>
+    if (not check (TokenType::LParen))
+    {
+      AstNodePtr varIndex;
+      if (check (TokenType::LBrack))
+      {
+        match (TokenType::LBrack);
+        varIndex = parseExpression ();
+        match (TokenType::RBrack);
+      }
+      // Roll <var> into factor
+      leftTree =
+        makeAstNode<VarExprNode> (std::move (idName), std::move (varIndex));
+      // If assign expr
+      if (check (TokenType::Assign))
+      {
+        match (TokenType::Assign);
+        AstNodePtr assignExpr = parseExpression ();
+        return makeAstNode<AssignExprNode> (std::move (leftTree),
+                                            std::move (assignExpr));
+      }
+    }
+    else
+    // Roll <call> into factor
+    {
+      match (TokenType::LParen);
+      std::vector<AstNodePtr> args = parseArgs ();
+      match (TokenType::RParen);
+      leftTree =
+        makeAstNode<CallExprNode> (std::move (idName), std::move (args));
+    }
   }
-
-  match (TokenType::Id);
-
-  // If parsing <call>
-  if (check (TokenType::LParen))
-  {
-    match (TokenType::LParen);
-    if (!check (TokenType::RParen))
-      parseArgs ();
-    match (TokenType::RParen);
-    graduateFactor ();
-    parseSimpleExprPostAddExpr ();
-    return;
-  }
-
-  // If parsing <var>
-  else if (check (TokenType::LBrack))
-  {
-    match (TokenType::LBrack);
-    parseExpression ();
-    match (TokenType::RBrack);
-  }
-
-  // If still parsing here, must have parsed: < ID | <var> >
-
-  // If < ID | <var> > was a factor
-  if (!check (TokenType::Assign))
-  {
-    graduateFactor ();
-    parseSimpleExprPostAddExpr ();
-  }
-
-  // If < ID | <var> > was part of "<var> = <expr>"
   else
   {
-    match (TokenType::Assign);
-    parseExpression ();
+    leftTree = parseFactor ();
   }
-}
 
-void
-Parser::graduateFactor ()
-{
-  // Graduate from <factor> to <term>
+  // leftTree is first factor of expression
   repeatWhile (
-    [this]
+    [this, &leftTree]
     {
-      match (current_.type);
-      parseFactor ();
+      TokenType op = match (current_.type).type;
+      AstNodePtr rightTree = parseFactor ();
+      leftTree = makeAstNode<BinaryExprNode> (
+        op, std::move (leftTree), std::move (rightTree));
     },
     { TokenType::Multiply, TokenType::Divide });
 
-  // Graduate from <term> to <additive-expression>
   repeatWhile (
-    [this]
+    [this, &leftTree]
     {
-      match (current_.type);
-      parseTerm ();
+      TokenType op = match (current_.type).type;
+      AstNodePtr rightTree = parseTerm ();
+      leftTree = makeAstNode<BinaryExprNode> (
+        op, std::move (leftTree), std::move (rightTree));
     },
     { TokenType::Plus, TokenType::Minus });
-}
 
-void
-Parser::parseVar ()
-{
-  match (TokenType::Id);
-  if (check (TokenType::LBrack))
+  if (isRelop ())
   {
-    match (TokenType::LBrack);
-    parseExpression ();
-    match (TokenType::RBrack);
+    TokenType op = match (current_.type).type;
+    AstNodePtr rightTree = parseAdditiveExpr ();
+    leftTree = makeAstNode<BinaryExprNode> (
+      op, std::move (leftTree), std::move (rightTree));
   }
+  return leftTree;
 }
 
-void
-Parser::parseSimpleExpr ()
+bool
+Parser::isRelop ()
 {
-  parseAdditiveExpr ();
-  parseSimpleExprPostAddExpr ();
+  return (check (TokenType::LessEqual) || check (TokenType::Less) ||
+          check (TokenType::Greater) || check (TokenType::GreaterEqual) ||
+          check (TokenType::Equal) || check (TokenType::NotEqual));
 }
 
-void
-Parser::parseSimpleExprPostAddExpr ()
-{
-  switch (current_.type)
-  {
-    case TokenType::LessEqual:
-    case TokenType::Less:
-    case TokenType::Greater:
-    case TokenType::GreaterEqual:
-    case TokenType::Equal:
-    case TokenType::NotEqual:
-    {
-      match (current_.type);
-      parseAdditiveExpr ();
-      break;
-    }
-    default:
-      return;
-  }
-}
-
-void
+AstNodePtr
 Parser::parseAdditiveExpr ()
 {
-  parseTerm ();
+  AstNodePtr leftTree = parseTerm ();
   repeatWhile (
-    [this]
+    [this, &leftTree]
     {
-      match (current_.type);
-      parseTerm ();
+      TokenType op = match (current_.type).type;
+      AstNodePtr rightTree = parseTerm ();
+      leftTree = makeAstNode<BinaryExprNode> (
+        op, std::move (leftTree), std::move (rightTree));
     },
     { TokenType::Plus, TokenType::Minus });
+  return leftTree;
 }
 
-void
+AstNodePtr
 Parser::parseTerm ()
 {
-  parseFactor ();
+  AstNodePtr leftTree = parseFactor ();
   repeatWhile (
-    [this]
+    [this, &leftTree]
     {
-      match (current_.type);
-      parseFactor ();
+      TokenType op = match (current_.type).type;
+      AstNodePtr rightTree = parseFactor ();
+      leftTree = makeAstNode<BinaryExprNode> (
+        op, std::move (leftTree), std::move (rightTree));
     },
     { TokenType::Multiply, TokenType::Divide });
+  return leftTree;
 }
 
-void
+AstNodePtr
 Parser::parseFactor ()
 {
   switch (current_.type)
   {
     case TokenType::LParen:
+    {
       match (TokenType::LParen);
-      parseExpression ();
+      AstNodePtr expr = parseExpression ();
       match (TokenType::RParen);
-      break;
+      return expr;
+    }
     case TokenType::Num:
-      match (TokenType::Num);
-      break;
+    {
+      int value = std::stoi (match (TokenType::Num).lexeme);
+      return makeAstNode<NumExprNode> (value);
+    }
     case TokenType::Id:
-      match (TokenType::Id);
+    {
+      std::string idName = match (TokenType::Id).lexeme;
       switch (current_.type)
       {
         case TokenType::LBrack:
+        {
+          // Var Factor with index
           match (TokenType::LBrack);
-          parseExpression ();
+          AstNodePtr varIndex;
+          varIndex = parseExpression ();
           match (TokenType::RBrack);
-          break;
+          return makeAstNode<VarExprNode> (std::move (idName),
+                                           std::move (varIndex));
+        }
+        // Call Factor
         case TokenType::LParen:
+        {
           match (TokenType::LParen);
-          parseExpression ();
+          std::vector<AstNodePtr> args = parseArgs ();
           match (TokenType::RParen);
-          break;
+          return makeAstNode<CallExprNode> (std::move (idName),
+                                            std::move (args));
+        }
         default:
-          return;
+          // Var Factor without index
+          return makeAstNode<VarExprNode> (std::move (idName));
       }
-      break;
+    }
+    break;
     default:
       throw InvalidSyntaxException (current_.line,
                                     current_.column,
@@ -490,15 +526,19 @@ Parser::parseFactor ()
   }
 }
 
-void
+std::vector<AstNodePtr>
 Parser::parseArgs ()
 {
-  parseExpression ();
+  std::vector<AstNodePtr> args;
+  if (check (TokenType::RParen))
+    return args;
+  args.push_back (parseExpression ());
   repeatWhile (
-    [this]
+    [this, &args]
     {
       match (TokenType::Comma);
-      parseExpression ();
+      args.push_back (parseExpression ());
     },
     { TokenType::Comma });
+  return args;
 }

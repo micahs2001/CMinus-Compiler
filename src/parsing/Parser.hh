@@ -11,6 +11,7 @@
 #pragma once
 
 #include "lexing/Scanner.hh"
+#include "semantic_analysis/Ast.hh"
 
 /*****************************************************************************/
 // Parser Class Definition
@@ -20,7 +21,7 @@ class Parser
 public:
   explicit Parser (Scanner scanner);
 
-  void
+  AstNodePtr
   parse ();
 
 private:
@@ -55,9 +56,9 @@ private:
 
   /****************************************************************************
    * Parse program of form:
-   * <program> ::= { <declaration> } <EOF>
+   * <program> ::= <declaration> { <declaration> } <EOF>
    ***************************************************************************/
-  void
+  AstNodePtr
   parseProgram ();
 
   /****************************************************************************
@@ -67,21 +68,21 @@ private:
    *                                    | "(" <full-params> ")" <compound-stmt>
    *                                    )
    ***************************************************************************/
-  void
+  AstNodePtr
   parseDecl ();
 
   /****************************************************************************
    * Parse variable declaration of form:
    * <var-declaration> ::= <type-spec> <id> [ "[" NUM "]" ] ";"
    ***************************************************************************/
-  void
+  AstNodePtr
   parseVarDeclaration ();
 
   /****************************************************************************
    * Parse type specifier of form:
    * <type-spec> ::= "int" | "void"
    ***************************************************************************/
-  void
+  TypeSpecifier
   parseTypeSpec ();
 
   /****************************************************************************
@@ -91,28 +92,23 @@ private:
                      | <param>
                      | <full-params> { "," <param> }
    ***************************************************************************/
-  void
+  std::vector<AstNodePtr>
   parseFullParams ();
 
   /****************************************************************************
    * Parse parameter of form:
    * <param> ::= <type-spec> <param-post-type-spec>
    ***************************************************************************/
-  void
-  parseParam ();
+  AstNodePtr
 
-  /****************************************************************************
-   * Parse parameter post type specififer of form:
-   * <param-post-type-spec> ::= <id> [ "[" "]" ]
-   ***************************************************************************/
-  void
-  ParseParamPostTypeSpec ();
+  parseParam ();
 
   /****************************************************************************
    * Parse compound statement of form:
    * <compound-stmt> ::= "{" { <var-declaration> } { <statement> } "}"
    ***************************************************************************/
-  void
+
+  AstNodePtr
   parseCompoundStmt ();
 
   /****************************************************************************
@@ -123,14 +119,14 @@ private:
    *               | <iteration-stmt>
    *               | <return-stmt>
    ***************************************************************************/
-  void
+  AstNodePtr
   parseStatement ();
 
   /****************************************************************************
    * Parse expression statement of form:
    * <expression-stmt> ::= [ <expression> ] ";"
    ***************************************************************************/
-  void
+  AstNodePtr
   parseExpressionStmt ();
 
   /****************************************************************************
@@ -138,21 +134,21 @@ private:
    * <selection-stmt> ::= "if" "(" <expression> ")" <statement>
    *                      [ "else" <statement> ]
    ***************************************************************************/
-  void
+  AstNodePtr
   parseSelectionStmt ();
 
   /****************************************************************************
    * Parse iteration statement of form:
    * <iteration-stmt> ::= "while" "(" <expression> ")" <statement>
    ***************************************************************************/
-  void
+  AstNodePtr
   parseIterationStmt ();
 
   /****************************************************************************
    * Parse return statement of form:
    * <return-stmt> ::= "return" [ <expression> ] ";"
    ***************************************************************************/
-  void
+  AstNodePtr
   parseReturnStmt ();
 
   /****************************************************************************
@@ -161,35 +157,38 @@ private:
    *                | <simple-expression>
    *                | <additive-expression> <simple-expr-post-add-expr>
    ***************************************************************************/
-  void
+  AstNodePtr
   parseExpression ();
 
   /****************************************************************************
    * Graduates a factor that was just parsed to an additive expression
    ***************************************************************************/
-  void
-  graduateFactor ();
+  AstNodePtr
+  graduateFactor (AstNodePtr leftTree);
 
   /****************************************************************************
    * Parse a variable of form:
    * <var> ::= ID | ID "[" <expression> "]"
    ***************************************************************************/
-  void
+  AstNodePtr
   parseVar ();
 
   /****************************************************************************
    * Parse simple expression of form:
    * <simple-expression> ::= <additive-expression> <simple-expr-post-add-expr>
    ***************************************************************************/
-  void
+  AstNodePtr
   parseSimpleExpr ();
+
+  bool
+  isRelop ();
 
   /****************************************************************************
    * Parse a simple expression after an additive expression of form:
    * <simple-expr-post-add-expr> ::= [ <relop> <additive-exprression> ]
    * Where <relop> ::= "<=" | "<" | ">" | ">=" | "==" | "!="
    ***************************************************************************/
-  void
+  AstNodePtr
   parseSimpleExprPostAddExpr ();
 
   /****************************************************************************
@@ -197,7 +196,7 @@ private:
    * <additive-expression> ::= <term> { <addop> <term> }
    * Where <addop> ::= "+" | "-"
    ***************************************************************************/
-  void
+  AstNodePtr
   parseAdditiveExpr ();
 
   /****************************************************************************
@@ -205,21 +204,21 @@ private:
    * <term> ::= <factor> { <mulop> <factor> }
    * Where <mulop> ::= "*" | "/"
    ***************************************************************************/
-  void
+  AstNodePtr
   parseTerm ();
 
   /****************************************************************************
    * Parse factor of form:
    * <factor> ::= "(" <expression> ")" | <var> | <call> | NUM
    ***************************************************************************/
-  void
+  AstNodePtr
   parseFactor ();
 
   /****************************************************************************
    * Parse args of form:
    * <expression> { "," <expression> }
    ***************************************************************************/
-  void
+  std::vector<AstNodePtr>
   parseArgs ();
 
   /*****************************************************************************/
